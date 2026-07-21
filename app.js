@@ -1,9 +1,25 @@
-// TODO: Replace with the deployed Google Apps Script Web App URL
+﻿// TODO: Replace with the deployed Google Apps Script Web App URL
 const GAS_API_URL = "YOUR_GAS_WEB_APP_URL_HERE";
 
 let globalHistoryData = null;
 let pieChartInstance = null;
 let trendChartInstance = null;
+
+// Utility for safe local date arithmetic
+function getOffsetDateStr(dateStrOrObj, offsetDays) {
+    let date;
+    if (typeof dateStrOrObj === 'string') {
+        const parts = dateStrOrObj.split('-');
+        date = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+    } else {
+        date = new Date(dateStrOrObj.getTime());
+    }
+    date.setDate(date.getDate() + offsetDays);
+    const yyyy = date.getFullYear();
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    const dd = String(date.getDate()).padStart(2, '0');
+    return ${yyyy}--;
+}
 
 document.addEventListener('DOMContentLoaded', async () => {
     setupDatePicker();
@@ -19,13 +35,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 function setupDatePicker() {
     const dateInput = document.getElementById('date-select');
     
-    // Set default to today
-    const today = new Date();
-    // Use local time for YYYY-MM-DD
-    const yyyy = today.getFullYear();
-    const mm = String(today.getMonth() + 1).padStart(2, '0');
-    const dd = String(today.getDate()).padStart(2, '0');
-    dateInput.value = `${yyyy}-${mm}-${dd}`;
+    // Set default to today (local)
+    dateInput.value = getOffsetDateStr(new Date(), 0);
     
     // Listen to changes
     dateInput.addEventListener('change', (e) => {
@@ -46,34 +57,30 @@ async function fetchData() {
         }
         
         globalHistoryData = data.history;
-        document.getElementById('date-display').innerText = `마지막 동기화: ${data.lastUpdated}`;
+        document.getElementById('date-display').innerText = 마지막 동기화: ;
         
         const selectedDate = document.getElementById('date-select').value;
         updateUIForDate(selectedDate);
     } catch (error) {
         console.error("Error fetching data:", error);
-        document.getElementById('date-display').innerText = "데이터를 불러오는 중 오류가 발생했습니다. (가짜 데이터 표시중)";
+        document.getElementById('date-display').innerText = "데이터를 불러오는 중 오류가 발생했습니다. (가상 데이터 표시중)";
         initMockData();
     }
 }
 
 function initMockData() {
-    // Generate some fake history from Jan 2025 to today
+    // Generate some fake history for the last 60 days to today
     const history = {};
-    const startDate = new Date('2025-01-01');
     const today = new Date();
     
-    let current = new Date(startDate);
-    while(current <= today) {
-        const dStr = current.toISOString().split('T')[0];
-        // Random daily data
+    for(let i = 60; i >= 0; i--) {
+        const dStr = getOffsetDateStr(today, -i);
         history[dStr] = {
             website: Math.floor(Math.random() * 5),
             naver: Math.floor(Math.random() * 3),
             kakao: Math.floor(Math.random() * 2),
             youtube: Math.floor(Math.random() * 2)
         };
-        current.setDate(current.getDate() + 1);
     }
     
     globalHistoryData = history;
@@ -90,9 +97,7 @@ function updateUIForDate(targetDateStr) {
     const targetData = globalHistoryData[targetDateStr] || { website: 0, naver: 0, kakao: 0, youtube: 0 };
     
     // 2. Get Previous Day Data for comparison
-    const targetDateObj = new Date(targetDateStr);
-    targetDateObj.setDate(targetDateObj.getDate() - 1);
-    const prevDateStr = targetDateObj.toISOString().split('T')[0];
+    const prevDateStr = getOffsetDateStr(targetDateStr, -1);
     const prevData = globalHistoryData[prevDateStr] || { website: 0, naver: 0, kakao: 0, youtube: 0 };
 
     // 3. Update Counts & Comparisons
@@ -103,20 +108,20 @@ function updateUIForDate(targetDateStr) {
         const prevCount = prevData[platform];
         
         // Count
-        document.getElementById(`count-${platform}`).innerText = currentCount;
+        document.getElementById(count-).innerText = currentCount;
         
         // Comparison
-        const compEl = document.getElementById(`comp-${platform}`);
+        const compEl = document.getElementById(comp-);
         const diff = currentCount - prevCount;
         
         if (diff > 0) {
-            compEl.innerText = `전일 대비: ▲ ${diff}`;
+            compEl.innerText = 전일 대비: ▲ ;
             compEl.className = 'comparison positive';
         } else if (diff < 0) {
-            compEl.innerText = `전일 대비: ▼ ${Math.abs(diff)}`;
+            compEl.innerText = 전일 대비: ▼ ;
             compEl.className = 'comparison negative';
         } else {
-            compEl.innerText = `전일 대비: - (변동 없음)`;
+            compEl.innerText = 전일 대비: - (변동 없음);
             compEl.className = 'comparison';
         }
     });
@@ -152,7 +157,7 @@ function renderPieChart(data) {
     };
 
     pieChartInstance = new Chart(ctx, {
-        type: 'doughnut', // Doughnut looks cleaner in light theme
+        type: 'doughnut',
         data: chartData,
         options: {
             responsive: true,
@@ -180,36 +185,56 @@ function renderTrendChart(targetDateStr) {
     
     // Build array of last 7 dates ending on targetDateStr
     const labels = [];
-    const totals = [];
+    const dataWebsite = [];
+    const dataNaver = [];
+    const dataKakao = [];
+    const dataYoutube = [];
     
-    let current = new Date(targetDateStr);
-    current.setDate(current.getDate() - 6); // start 6 days ago (7 days total)
-    
-    for (let i = 0; i < 7; i++) {
-        const dStr = current.toISOString().split('T')[0];
+    for (let i = 6; i >= 0; i--) {
+        const dStr = getOffsetDateStr(targetDateStr, -i);
+        
         // Format for display (MM/DD)
-        const displayLabel = `${current.getMonth()+1}/${current.getDate()}`;
+        const parts = dStr.split('-');
+        const displayLabel = ${Number(parts[1])}/;
         labels.push(displayLabel);
         
         const dData = globalHistoryData[dStr] || { website:0, naver:0, kakao:0, youtube:0 };
-        const total = dData.website + dData.naver + dData.kakao + dData.youtube;
-        totals.push(total);
-        
-        current.setDate(current.getDate() + 1);
+        dataWebsite.push(dData.website);
+        dataNaver.push(dData.naver);
+        dataKakao.push(dData.kakao);
+        dataYoutube.push(dData.youtube);
     }
     
     trendChartInstance = new Chart(ctx, {
-        type: 'bar', // Bar chart is usually good for daily totals
+        type: 'bar',
         data: {
             labels: labels,
-            datasets: [{
-                label: '총 업로드 수',
-                data: totals,
-                backgroundColor: 'rgba(231, 51, 113, 0.7)',
-                borderColor: '#E73371',
-                borderWidth: 1,
-                borderRadius: 4
-            }]
+            datasets: [
+                {
+                    label: '홈페이지',
+                    data: dataWebsite,
+                    backgroundColor: '#E73371',
+                    borderRadius: 4
+                },
+                {
+                    label: '네이버 블로그',
+                    data: dataNaver,
+                    backgroundColor: '#F48FB1',
+                    borderRadius: 4
+                },
+                {
+                    label: '카카오톡 채널',
+                    data: dataKakao,
+                    backgroundColor: '#FCE4EC',
+                    borderRadius: 4
+                },
+                {
+                    label: '유튜브',
+                    data: dataYoutube,
+                    backgroundColor: '#333333',
+                    borderRadius: 4
+                }
+            ]
         },
         options: {
             responsive: true,
@@ -217,16 +242,29 @@ function renderTrendChart(targetDateStr) {
             scales: {
                 y: {
                     beginAtZero: true,
+                    stacked: true,
                     ticks: { precision: 0, font: { family: 'Paperlogy' } },
                     grid: { color: '#f0f0f0' }
                 },
                 x: {
+                    stacked: true,
                     ticks: { font: { family: 'Paperlogy' } },
                     grid: { display: false }
                 }
             },
             plugins: {
-                legend: { display: false }
+                legend: {
+                    display: true,
+                    position: 'top',
+                    labels: {
+                        color: '#333333',
+                        font: { family: 'Paperlogy', size: 11 }
+                    }
+                },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false
+                }
             }
         }
     });
