@@ -126,7 +126,7 @@ function getWebsiteCounts() {
 
 function getNaverBlogCount() {
   try {
-    const rssUrl =`https://rss.blog.naver.com/$gds0741.xml`;
+    const rssUrl =`https://rss.blog.naver.com/${gds0741}.xml`;
     const response = UrlFetchApp.fetch(rssUrl, { muteHttpExceptions: true });
     const xml = response.getContentText();
     const today = new Date();
@@ -153,7 +153,7 @@ function getNaverBlogCount() {
 
 function getKakaoTalkCount() {
   try {
-    const url = `https://pf.kakao.com/$_ZWFZn/posts`;
+    const url = `https://pf.kakao.com/${_ZWFZn}/posts`;
     const response = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
     const html = response.getContentText();
     const todayStr = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy.MM.dd');
@@ -165,7 +165,7 @@ function getKakaoTalkCount() {
 
 function getYouTubeCount() {
   try {
-    const rssUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=$UCgAO5d2OyVURs3e2F6tphVw?si=Une72iVS3slgA4_3`;
+    const rssUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${UCgAO5d2OyVURs3e2F6tphVw?si=Une72iVS3slgA4_3}`;
     const response = UrlFetchApp.fetch(rssUrl, { muteHttpExceptions: true });
     const xml = response.getContentText();
     let todayCount = 0;
