@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>강동어울림복지관 게시글 통계</title>
+    <title>강동?�울림복지관 게시글 ?�계</title>
     <!-- Paperlogy Font -->
     <link href="https://fastly.jsdelivr.net/gh/projectnoonnu/2408-3@1.0/Paperlogy-Regular.woff2" rel="stylesheet" />
     <link rel="stylesheet" href="style.css">
@@ -18,51 +18,51 @@
 
     <div class="main-dashboard">
         <header>
-            <h1>강동어울림복지관 온라인 홍보 실적</h1>
+            <h1>강동?�울림복지관 ?�라???�보 ?�적</h1>
             
             <div class="date-picker-container">
-                <label for="date-select">조회 일자:</label>
+                <label for="date-select">조회 ?�자:</label>
                 <!-- Date picker to select the exact day -->
                 <input type="date" id="date-select" />
             </div>
 
-            <p id="date-display">데이터 로딩 중...</p>
+            <p id="date-display">?�이??로딩 �?..</p>
         </header>
 
         <div class="metrics-grid">
             <!-- Website -->
             <div class="metric-card">
-                <h3>홈페이지</h3>
+                <h3>?�페?��?</h3>
                 <div class="count" id="count-website">-</div>
-                <div class="comparison" id="comp-website">전일 대비: -</div>
+                <div class="comparison" id="comp-website">?�일 ?��? -</div>
             </div>
             
             <!-- Naver Blog -->
             <div class="metric-card">
-                <h3>네이버 블로그</h3>
+                <h3>?�이�?블로�?/h3>
                 <div class="count" id="count-naver">-</div>
-                <div class="comparison" id="comp-naver">전일 대비: -</div>
+                <div class="comparison" id="comp-naver">?�일 ?��? -</div>
             </div>
 
             <!-- KakaoTalk -->
             <div class="metric-card">
-                <h3>카카오톡 채널</h3>
+                <h3>카카?�톡 채널</h3>
                 <div class="count" id="count-kakao">-</div>
-                <div class="comparison" id="comp-kakao">전일 대비: -</div>
+                <div class="comparison" id="comp-kakao">?�일 ?��? -</div>
             </div>
 
             <!-- YouTube -->
             <div class="metric-card">
-                <h3>유튜브</h3>
+                <h3>?�튜�?/h3>
                 <div class="count" id="count-youtube">-</div>
-                <div class="comparison" id="comp-youtube">전일 대비: -</div>
+                <div class="comparison" id="comp-youtube">?�일 ?��? -</div>
             </div>
         </div>
 
         <div class="charts-row">
             <!-- Pie Chart (Proportions for selected date) -->
             <div class="chart-section">
-                <h2>매체별 비율 (조회 일자)</h2>
+                <h2>매체�?비율 (조회 ?�자)</h2>
                 <div class="chart-container">
                     <canvas id="pieChart"></canvas>
                 </div>
@@ -70,7 +70,7 @@
 
             <!-- Trend Chart (Last 7 Days) -->
             <div class="chart-section">
-                <h2>최근 1주일 업로드 추이</h2>
+                <h2>최근 1주일 ?�로??추이</h2>
                 <div class="chart-container">
                     <canvas id="trendChart"></canvas>
                 </div>
@@ -78,6 +78,12 @@
         </div>
     </div>
 
+        <!-- Kakao SDK -->
+    <script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.2/kakao.min.js"></script>
+    <script>
+        Kakao.init('d549393fd4ffa7160e4374e57ee9983d');
+        console.log('Kakao SDK Initialized: ', Kakao.isInitialized());
+    </script>
     <script src="app.js"></script>
 </body>
 </html>
