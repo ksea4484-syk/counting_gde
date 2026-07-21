@@ -1,11 +1,13 @@
 /**
- * Gangdong Eoullim Welfare Center Post Counter (Google Apps Script)
+ * Gangdong Eoullim Welfare Center Post Counter V2 (Google Apps Script)
  * 
- * Please attach this script to a Google Spreadsheet.
+ * Target Google Sheet ID: 11T84ToYo5kIaTPgNj9i_Xv8q1Q8Ef7AAGQTypo14YjY
  * The spreadsheet should have a sheet named "Data" with headers in Row 1:
  * [Date, Website, NaverBlog, KakaoTalk, YouTube]
+ * Format for Date column must be 'yyyy-MM-dd' (e.g. 2025-01-01)
  */
 
+const TARGET_SHEET_ID = '11T84ToYo5kIaTPgNj9i_Xv8q1Q8Ef7AAGQTypo14YjY';
 const SHEET_NAME = 'Data';
 const YOUTUBE_CHANNEL_ID = 'UCgAO5d2OyVURs3e2F6tphVw';
 const NAVER_BLOG_ID = 'gds0741';
@@ -33,7 +35,8 @@ function fetchAndSaveDailyCounts() {
   const kakaoCount = getKakaoTalkCount();
   const youtubeCount = getYouTubeCount();
   
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
+  const ss = SpreadsheetApp.openById(TARGET_SHEET_ID);
+  const sheet = ss.getSheetByName(SHEET_NAME);
   if (!sheet) {
     Logger.log("Sheet named 'Data' not found.");
     return;
@@ -44,10 +47,18 @@ function fetchAndSaveDailyCounts() {
 }
 
 /**
- * API Endpoint for the frontend to retrieve data.
+ * API Endpoint for the frontend to retrieve all historical data.
  */
 function doGet(e) {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
+  let sheet;
+  try {
+    const ss = SpreadsheetApp.openById(TARGET_SHEET_ID);
+    sheet = ss.getSheetByName(SHEET_NAME);
+  } catch(err) {
+    return ContentService.createTextOutput(JSON.stringify({error: "Cannot open target sheet."}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+  
   if (!sheet) {
     return ContentService.createTextOutput(JSON.stringify({error: "Sheet not found"}))
       .setMimeType(ContentService.MimeType.JSON);
@@ -55,28 +66,19 @@ function doGet(e) {
   
   const dataRange = sheet.getDataRange();
   const values = dataRange.getValues();
+  const rows = values.slice(1); // Skip header row
   
-  // Skip header row
-  const rows = values.slice(1);
-  
-  const now = new Date();
-  const currentMonth = now.getMonth();
-  const currentYear = now.getFullYear();
-  
-  let currentMonthCounts = { website: 0, naver: 0, kakao: 0, youtube: 0 };
-  let previousMonthCounts = { website: 0, naver: 0, kakao: 0, youtube: 0 };
-  let dailyCountsMap = {}; 
+  let dailyData = {}; 
   
   rows.forEach(row => {
     let dateVal = row[0];
+    if (!dateVal) return;
+    
+    // Attempt to parse date securely
     if (!(dateVal instanceof Date)) {
       dateVal = new Date(dateVal);
     }
-    
     if (isNaN(dateVal.getTime())) return;
-    
-    const rowMonth = dateVal.getMonth();
-    const rowYear = dateVal.getFullYear();
     
     const website = Number(row[1]) || 0;
     const naver = Number(row[2]) || 0;
@@ -84,27 +86,15 @@ function doGet(e) {
     const youtube = Number(row[4]) || 0;
     
     const dateStr = Utilities.formatDate(dateVal, Session.getScriptTimeZone(), 'yyyy-MM-dd');
-    dailyCountsMap[dateStr] = { website, naver, kakao, youtube };
     
-    if (rowYear === currentYear && rowMonth === currentMonth) {
-      currentMonthCounts.website += website;
-      currentMonthCounts.naver += naver;
-      currentMonthCounts.kakao += kakao;
-      currentMonthCounts.youtube += youtube;
-    }
-    else if ((rowMonth === currentMonth - 1 && rowYear === currentYear) || (currentMonth === 0 && rowMonth === 11 && rowYear === currentYear - 1)) {
-      previousMonthCounts.website += website;
-      previousMonthCounts.naver += naver;
-      previousMonthCounts.kakao += kakao;
-      previousMonthCounts.youtube += youtube;
-    }
+    // We store all daily history so the frontend can query any date, 
+    // compare to the day before, and build the 7-day trend chart.
+    dailyData[dateStr] = { website, naver, kakao, youtube };
   });
   
   const payload = {
-    currentMonth: currentMonthCounts,
-    previousMonth: previousMonthCounts,
-    dailyHistory: dailyCountsMap,
-    lastUpdated: Utilities.formatDate(now, Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss')
+    history: dailyData,
+    lastUpdated: Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss')
   };
   
   return ContentService.createTextOutput(JSON.stringify(payload))
@@ -112,10 +102,11 @@ function doGet(e) {
     .setHeader("Access-Control-Allow-Origin", "*");
 }
 
+// ================= Scraping Helper Functions =================
+
 function getWebsiteCounts() {
   let totalCount = 0;
   const todayStr = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');
-  
   WEBSITE_URLS.forEach(url => {
     try {
       const response = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
@@ -137,10 +128,8 @@ function getNaverBlogCount() {
     const xml = response.getContentText();
     const today = new Date();
     let todayCount = 0;
-    
     const document = XmlService.parse(xml);
-    const root = document.getRootElement();
-    const channel = root.getChild('channel');
+    const channel = document.getRootElement().getChild('channel');
     if (!channel) return 0;
     
     const items = channel.getChildren('item');
@@ -179,9 +168,8 @@ function getYouTubeCount() {
     let todayCount = 0;
     const today = new Date();
     const document = XmlService.parse(xml);
-    const root = document.getRootElement();
     const atomNamespace = XmlService.getNamespace('http://www.w3.org/2005/Atom');
-    const entries = root.getChildren('entry', atomNamespace);
+    const entries = document.getRootElement().getChildren('entry', atomNamespace);
     entries.forEach(entry => {
       const publishedText = entry.getChildText('published', atomNamespace);
       if (publishedText) {

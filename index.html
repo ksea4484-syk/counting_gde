@@ -7,55 +7,73 @@
     <!-- Paperlogy Font -->
     <link href="https://fastly.jsdelivr.net/gh/projectnoonnu/2408-3@1.0/Paperlogy-Regular.woff2" rel="stylesheet" />
     <link rel="stylesheet" href="style.css">
-    <!-- Chart.js for Pie Chart -->
+    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <div class="background-circles">
-        <div class="circle circle-1"></div>
-        <div class="circle circle-2"></div>
+    <div class="background-accents">
+        <div class="accent-circle circle-1"></div>
+        <div class="accent-circle circle-2"></div>
     </div>
 
-    <div class="glass-container main-dashboard">
+    <div class="main-dashboard">
         <header>
             <h1>강동어울림복지관 온라인 홍보 실적</h1>
+            
+            <div class="date-picker-container">
+                <label for="date-select">조회 일자:</label>
+                <!-- Date picker to select the exact day -->
+                <input type="date" id="date-select" />
+            </div>
+
             <p id="date-display">데이터 로딩 중...</p>
         </header>
 
         <div class="metrics-grid">
             <!-- Website -->
-            <div class="metric-card glass-panel">
+            <div class="metric-card">
                 <h3>홈페이지</h3>
                 <div class="count" id="count-website">-</div>
-                <div class="comparison" id="comp-website">전월 대비: -</div>
+                <div class="comparison" id="comp-website">전일 대비: -</div>
             </div>
             
             <!-- Naver Blog -->
-            <div class="metric-card glass-panel">
+            <div class="metric-card">
                 <h3>네이버 블로그</h3>
                 <div class="count" id="count-naver">-</div>
-                <div class="comparison" id="comp-naver">전월 대비: -</div>
+                <div class="comparison" id="comp-naver">전일 대비: -</div>
             </div>
 
             <!-- KakaoTalk -->
-            <div class="metric-card glass-panel">
+            <div class="metric-card">
                 <h3>카카오톡 채널</h3>
                 <div class="count" id="count-kakao">-</div>
-                <div class="comparison" id="comp-kakao">전월 대비: -</div>
+                <div class="comparison" id="comp-kakao">전일 대비: -</div>
             </div>
 
             <!-- YouTube -->
-            <div class="metric-card glass-panel">
+            <div class="metric-card">
                 <h3>유튜브</h3>
                 <div class="count" id="count-youtube">-</div>
-                <div class="comparison" id="comp-youtube">전월 대비: -</div>
+                <div class="comparison" id="comp-youtube">전일 대비: -</div>
             </div>
         </div>
 
-        <div class="chart-section glass-panel">
-            <h2>매체별 게시물 비율 (이번 달)</h2>
-            <div class="chart-container">
-                <canvas id="pieChart"></canvas>
+        <div class="charts-row">
+            <!-- Pie Chart (Proportions for selected date) -->
+            <div class="chart-section">
+                <h2>매체별 비율 (조회 일자)</h2>
+                <div class="chart-container">
+                    <canvas id="pieChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Trend Chart (Last 7 Days) -->
+            <div class="chart-section">
+                <h2>최근 1주일 업로드 추이</h2>
+                <div class="chart-container">
+                    <canvas id="trendChart"></canvas>
+                </div>
             </div>
         </div>
     </div>
