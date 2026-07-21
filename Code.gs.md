@@ -1,11 +1,12 @@
 /**
- * Gangdong Eoullim Welfare Center Post Counter V2 (Google Apps Script)
- * 
- * Target Google Sheet ID: 11T84ToYo5kIaTPgNj9i_Xv8q1Q8Ef7AAGQTypo14YjY
- * The spreadsheet should have a sheet named "Data" with headers in Row 1:
- * [Date, Website, NaverBlog, KakaoTalk, YouTube]
- * Format for Date column must be 'yyyy-MM-dd' (e.g. 2025-01-01)
- */
+
+* Gangdong Eoullim Welfare Center Post Counter V2 (Google Apps Script)
+* 
+* Target Google Sheet ID: 11T84ToYo5kIaTPgNj9i_Xv8q1Q8Ef7AAGQTypo14YjY
+* The spreadsheet should have a sheet named "Data" with headers in Row 1:
+* [Date, Website, NaverBlog, KakaoTalk, YouTube]
+* Format for Date column must be 'yyyy-MM-dd' (e.g. 2025-01-01)
+  */
 
 const TARGET_SHEET_ID = '11T84ToYo5kIaTPgNj9i_Xv8q1Q8Ef7AAGQTypo14YjY';
 const SHEET_NAME = 'Data';
@@ -24,79 +25,81 @@ const WEBSITE_URLS = [
 ];
 
 /**
- * Main function to fetch counts and save to the spreadsheet.
- * Set up a Time-driven trigger to run this daily (e.g., at 23:30).
- */
-function fetchAndSaveDailyCounts() {
+
+* Main function to fetch counts and save to the spreadsheet.
+* Set up a Time-driven trigger to run this daily (e.g., at 23:30).
+  */
+  function fetchAndSaveDailyCounts() {
   const dateStr = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');
-  
+
   const websiteCount = getWebsiteCounts();
   const naverCount = getNaverBlogCount();
   const kakaoCount = getKakaoTalkCount();
   const youtubeCount = getYouTubeCount();
-  
+
   const ss = SpreadsheetApp.openById(TARGET_SHEET_ID);
   const sheet = ss.getSheetByName(SHEET_NAME);
   if (!sheet) {
     Logger.log("Sheet named 'Data' not found.");
     return;
   }
-  
+
   // Append new row: [Date, Website, NaverBlog, KakaoTalk, YouTube]
   sheet.appendRow([dateStr, websiteCount, naverCount, kakaoCount, youtubeCount]);
 }
 
 /**
- * API Endpoint for the frontend to retrieve all historical data.
- */
-function doGet(e) {
+
+* API Endpoint for the frontend to retrieve all historical data.
+  */
+  function doGet(e) {
   let sheet;
   try {
-    const ss = SpreadsheetApp.openById(TARGET_SHEET_ID);
-    sheet = ss.getSheetByName(SHEET_NAME);
+  const ss = SpreadsheetApp.openById(TARGET_SHEET_ID);
+  sheet = ss.getSheetByName(SHEET_NAME);
   } catch(err) {
-    return ContentService.createTextOutput(JSON.stringify({error: "Cannot open target sheet."}))
-      .setMimeType(ContentService.MimeType.JSON);
+  return ContentService.createTextOutput(JSON.stringify({error: "Cannot open target sheet."}))
+  .setMimeType(ContentService.MimeType.JSON);
   }
-  
+
   if (!sheet) {
     return ContentService.createTextOutput(JSON.stringify({error: "Sheet not found"}))
       .setMimeType(ContentService.MimeType.JSON);
   }
-  
+
   const dataRange = sheet.getDataRange();
   const values = dataRange.getValues();
   const rows = values.slice(1); // Skip header row
-  
-  let dailyData = {}; 
-  
+
+  let dailyData = {};
+
   rows.forEach(row => {
     let dateVal = row[0];
     if (!dateVal) return;
-    
+
     // Attempt to parse date securely
     if (!(dateVal instanceof Date)) {
       dateVal = new Date(dateVal);
     }
     if (isNaN(dateVal.getTime())) return;
-    
+
     const website = Number(row[1]) || 0;
     const naver = Number(row[2]) || 0;
     const kakao = Number(row[3]) || 0;
     const youtube = Number(row[4]) || 0;
-    
+
     const dateStr = Utilities.formatDate(dateVal, Session.getScriptTimeZone(), 'yyyy-MM-dd');
-    
-    // We store all daily history so the frontend can query any date, 
+
+    // We store all daily history so the frontend can query any date,
     // compare to the day before, and build the 7-day trend chart.
     dailyData[dateStr] = { website, naver, kakao, youtube };
   });
-  
+
   const payload = {
     history: dailyData,
     lastUpdated: Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss')
   };
-  
+
   return ContentService.createTextOutput(JSON.stringify(payload))
     .setMimeType(ContentService.MimeType.JSON)
     .setHeader("Access-Control-Allow-Origin", "*");
@@ -123,7 +126,7 @@ function getWebsiteCounts() {
 
 function getNaverBlogCount() {
   try {
-    const rssUrl = `https://rss.blog.naver.com/${NAVER_BLOG_ID}.xml`;
+    const rssUrl =`https://rss.blog.naver.com/$gds0741.xml`;
     const response = UrlFetchApp.fetch(rssUrl, { muteHttpExceptions: true });
     const xml = response.getContentText();
     const today = new Date();
@@ -131,14 +134,14 @@ function getNaverBlogCount() {
     const document = XmlService.parse(xml);
     const channel = document.getRootElement().getChild('channel');
     if (!channel) return 0;
-    
+
     const items = channel.getChildren('item');
     items.forEach(item => {
       const pubDateText = item.getChildText('pubDate');
       if (pubDateText) {
         const pubDate = new Date(pubDateText);
-        if (pubDate.getFullYear() === today.getFullYear() && 
-            pubDate.getMonth() === today.getMonth() && 
+        if (pubDate.getFullYear() === today.getFullYear() &&
+            pubDate.getMonth() === today.getMonth() &&
             pubDate.getDate() === today.getDate()) {
           todayCount++;
         }
@@ -150,7 +153,7 @@ function getNaverBlogCount() {
 
 function getKakaoTalkCount() {
   try {
-    const url = `https://pf.kakao.com/${KAKAO_CHANNEL_ID}/posts`;
+    const url = `https://pf.kakao.com/$_ZWFZn/posts`;
     const response = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
     const html = response.getContentText();
     const todayStr = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy.MM.dd');
@@ -162,7 +165,7 @@ function getKakaoTalkCount() {
 
 function getYouTubeCount() {
   try {
-    const rssUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${YOUTUBE_CHANNEL_ID}`;
+    const rssUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=$UCgAO5d2OyVURs3e2F6tphVw?si=Une72iVS3slgA4_3`;
     const response = UrlFetchApp.fetch(rssUrl, { muteHttpExceptions: true });
     const xml = response.getContentText();
     let todayCount = 0;
@@ -174,8 +177,8 @@ function getYouTubeCount() {
       const publishedText = entry.getChildText('published', atomNamespace);
       if (publishedText) {
         const pubDate = new Date(publishedText);
-        if (pubDate.getFullYear() === today.getFullYear() && 
-            pubDate.getMonth() === today.getMonth() && 
+        if (pubDate.getFullYear() === today.getFullYear() &&
+            pubDate.getMonth() === today.getMonth() &&
             pubDate.getDate() === today.getDate()) {
           todayCount++;
         }
