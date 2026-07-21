@@ -1,133 +1,233 @@
 // TODO: Replace with the deployed Google Apps Script Web App URL
 const GAS_API_URL = "YOUR_GAS_WEB_APP_URL_HERE";
 
+let globalHistoryData = null;
+let pieChartInstance = null;
+let trendChartInstance = null;
+
 document.addEventListener('DOMContentLoaded', async () => {
-    initMockData(); // Use mock data by default for demonstration until API is ready
+    setupDatePicker();
     
-    // To use real data, uncomment below and comment out initMockData()
-    // await fetchData();
+    // Attempt to fetch real data. If it fails or is not set, use mock data.
+    if (GAS_API_URL !== "YOUR_GAS_WEB_APP_URL_HERE") {
+        await fetchData();
+    } else {
+        initMockData();
+    }
 });
+
+function setupDatePicker() {
+    const dateInput = document.getElementById('date-select');
+    
+    // Set default to today
+    const today = new Date();
+    // Use local time for YYYY-MM-DD
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    dateInput.value = `${yyyy}-${mm}-${dd}`;
+    
+    // Listen to changes
+    dateInput.addEventListener('change', (e) => {
+        if (globalHistoryData) {
+            updateUIForDate(e.target.value);
+        }
+    });
+}
 
 async function fetchData() {
     try {
+        document.getElementById('date-display').innerText = "데이터 불러오는 중...";
         const response = await fetch(GAS_API_URL);
         const data = await response.json();
         
-        updateUI(data);
+        if (data.error) {
+            throw new Error(data.error);
+        }
+        
+        globalHistoryData = data.history;
+        document.getElementById('date-display').innerText = `마지막 동기화: ${data.lastUpdated}`;
+        
+        const selectedDate = document.getElementById('date-select').value;
+        updateUIForDate(selectedDate);
     } catch (error) {
         console.error("Error fetching data:", error);
-        document.getElementById('date-display').innerText = "데이터를 불러오는 중 오류가 발생했습니다.";
+        document.getElementById('date-display').innerText = "데이터를 불러오는 중 오류가 발생했습니다. (가짜 데이터 표시중)";
+        initMockData();
     }
 }
 
-// Fallback Mock Data for UI Testing
 function initMockData() {
-    const mockData = {
-        currentMonth: {
-            website: 45,
-            naver: 20,
-            kakao: 15,
-            youtube: 5
-        },
-        previousMonth: {
-            website: 40,
-            naver: 25,
-            kakao: 10,
-            youtube: 3
-        },
-        lastUpdated: new Date().toLocaleDateString('ko-KR')
-    };
-    updateUI(mockData);
+    // Generate some fake history from Jan 2025 to today
+    const history = {};
+    const startDate = new Date('2025-01-01');
+    const today = new Date();
+    
+    let current = new Date(startDate);
+    while(current <= today) {
+        const dStr = current.toISOString().split('T')[0];
+        // Random daily data
+        history[dStr] = {
+            website: Math.floor(Math.random() * 5),
+            naver: Math.floor(Math.random() * 3),
+            kakao: Math.floor(Math.random() * 2),
+            youtube: Math.floor(Math.random() * 2)
+        };
+        current.setDate(current.getDate() + 1);
+    }
+    
+    globalHistoryData = history;
+    document.getElementById('date-display').innerText = "가상 데이터 (API 연결 필요)";
+    
+    const selectedDate = document.getElementById('date-select').value;
+    updateUIForDate(selectedDate);
 }
 
-function updateUI(data) {
-    // 1. Update Date
-    document.getElementById('date-display').innerText = `마지막 업데이트: ${data.lastUpdated}`;
+function updateUIForDate(targetDateStr) {
+    if (!globalHistoryData) return;
+    
+    // 1. Get Target Date Data
+    const targetData = globalHistoryData[targetDateStr] || { website: 0, naver: 0, kakao: 0, youtube: 0 };
+    
+    // 2. Get Previous Day Data for comparison
+    const targetDateObj = new Date(targetDateStr);
+    targetDateObj.setDate(targetDateObj.getDate() - 1);
+    const prevDateStr = targetDateObj.toISOString().split('T')[0];
+    const prevData = globalHistoryData[prevDateStr] || { website: 0, naver: 0, kakao: 0, youtube: 0 };
 
-    // 2. Update Counts & Comparisons
+    // 3. Update Counts & Comparisons
     const platforms = ['website', 'naver', 'kakao', 'youtube'];
     
     platforms.forEach(platform => {
-        const currentCount = data.currentMonth[platform];
-        const previousCount = data.previousMonth[platform];
+        const currentCount = targetData[platform];
+        const prevCount = prevData[platform];
         
         // Count
         document.getElementById(`count-${platform}`).innerText = currentCount;
         
         // Comparison
         const compEl = document.getElementById(`comp-${platform}`);
-        const diff = currentCount - previousCount;
+        const diff = currentCount - prevCount;
         
         if (diff > 0) {
-            compEl.innerText = `전월 대비: ▲ ${diff}`;
+            compEl.innerText = `전일 대비: ▲ ${diff}`;
             compEl.className = 'comparison positive';
         } else if (diff < 0) {
-            compEl.innerText = `전월 대비: ▼ ${Math.abs(diff)}`;
+            compEl.innerText = `전일 대비: ▼ ${Math.abs(diff)}`;
             compEl.className = 'comparison negative';
         } else {
-            compEl.innerText = `전월 대비: - (변동 없음)`;
+            compEl.innerText = `전일 대비: - (변동 없음)`;
             compEl.className = 'comparison';
         }
     });
 
-    // 3. Render Pie Chart
-    renderChart(data.currentMonth);
+    // 4. Render Pie Chart
+    renderPieChart(targetData);
+    
+    // 5. Render Trend Chart (Last 7 Days from target date)
+    renderTrendChart(targetDateStr);
 }
 
-let pieChartInstance = null;
-
-function renderChart(currentMonthData) {
+function renderPieChart(data) {
     const ctx = document.getElementById('pieChart').getContext('2d');
     
     if (pieChartInstance) {
         pieChartInstance.destroy();
     }
 
-    const data = {
+    const chartData = {
         labels: ['홈페이지', '네이버 블로그', '카카오톡 채널', '유튜브'],
         datasets: [{
-            data: [
-                currentMonthData.website,
-                currentMonthData.naver,
-                currentMonthData.kakao,
-                currentMonthData.youtube
-            ],
+            data: [data.website, data.naver, data.kakao, data.youtube],
             backgroundColor: [
                 '#E73371', // Pink
-                '#FFFFFF', // White
-                'rgba(255, 255, 255, 0.6)', // Light White/Gray
-                'rgba(231, 51, 113, 0.5)'  // Light Pink
+                '#F48FB1', // Light Pink
+                '#FCE4EC', // Very Light Pink
+                '#333333'  // Dark Gray
             ],
-            borderColor: '#000000', // Black border to match background
-            borderWidth: 2,
+            borderWidth: 1,
+            borderColor: '#ffffff',
             hoverOffset: 10
         }]
     };
 
-    const config = {
-        type: 'pie',
-        data: data,
+    pieChartInstance = new Chart(ctx, {
+        type: 'doughnut', // Doughnut looks cleaner in light theme
+        data: chartData,
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            cutout: '60%',
             plugins: {
                 legend: {
                     position: 'bottom',
                     labels: {
-                        color: '#ffffff',
-                        font: {
-                            family: 'Paperlogy',
-                            size: 14
-                        }
+                        color: '#333333',
+                        font: { family: 'Paperlogy', size: 13 }
                     }
-                },
-                tooltip: {
-                    titleFont: { family: 'Paperlogy' },
-                    bodyFont: { family: 'Paperlogy' }
                 }
             }
         }
-    };
+    });
+}
 
-    pieChartInstance = new Chart(ctx, config);
+function renderTrendChart(targetDateStr) {
+    const ctx = document.getElementById('trendChart').getContext('2d');
+    
+    if (trendChartInstance) {
+        trendChartInstance.destroy();
+    }
+    
+    // Build array of last 7 dates ending on targetDateStr
+    const labels = [];
+    const totals = [];
+    
+    let current = new Date(targetDateStr);
+    current.setDate(current.getDate() - 6); // start 6 days ago (7 days total)
+    
+    for (let i = 0; i < 7; i++) {
+        const dStr = current.toISOString().split('T')[0];
+        // Format for display (MM/DD)
+        const displayLabel = `${current.getMonth()+1}/${current.getDate()}`;
+        labels.push(displayLabel);
+        
+        const dData = globalHistoryData[dStr] || { website:0, naver:0, kakao:0, youtube:0 };
+        const total = dData.website + dData.naver + dData.kakao + dData.youtube;
+        totals.push(total);
+        
+        current.setDate(current.getDate() + 1);
+    }
+    
+    trendChartInstance = new Chart(ctx, {
+        type: 'bar', // Bar chart is usually good for daily totals
+        data: {
+            labels: labels,
+            datasets: [{
+                label: '총 업로드 수',
+                data: totals,
+                backgroundColor: 'rgba(231, 51, 113, 0.7)',
+                borderColor: '#E73371',
+                borderWidth: 1,
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { precision: 0, font: { family: 'Paperlogy' } },
+                    grid: { color: '#f0f0f0' }
+                },
+                x: {
+                    ticks: { font: { family: 'Paperlogy' } },
+                    grid: { display: false }
+                }
+            },
+            plugins: {
+                legend: { display: false }
+            }
+        }
+    });
 }
